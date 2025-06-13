@@ -1,0 +1,11 @@
+[package]
+name = "json-carver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.40", features = ["derive"] }
+memchr = "2.7.5"
+
+[dev-dependencies]
+rstest = "0.25.0"
