@@ -1138,4 +1138,38 @@ mod tests {
         assert_eq!(buf, buf_expected.as_bytes());
         assert_eq!(report, report_expected.as_bytes());
     }
+
+    #[rstest]
+    fn json_test_suite_success(#[files("tests/JSONTestSuite/**/y_*.json")] path: PathBuf) {
+        let buf: Vec<u8> = fs::read(path).unwrap();
+        let mut res_buf = buf.clone();
+        if res_buf.last() == Some(&CHAR_NEWLINE) {
+            res_buf.pop();
+        }
+        assert_eq!(parse(&buf), res_buf);
+    }
+
+    #[rstest]
+    fn json_test_suite_impl(#[files("tests/JSONTestSuite/**/i_*.json")] path: PathBuf) {
+        let buf: Vec<u8> = fs::read(path).unwrap();
+        parse(&buf);
+    }
+
+    #[rstest]
+    fn json_test_suite_fail(
+        #[files("tests/JSONTestSuite/**/n_*.json")]
+        #[files("tests/test_valid_but_no_brackets/*.json")]
+        path: PathBuf,
+    ) {
+        let buf: Vec<u8> = fs::read(path).unwrap();
+        assert_eq!(parse(&buf).len(), 0);
+    }
+
+    #[rstest]
+    fn json_test_suite_partial(#[files("tests/test_partial/*.json")] path: PathBuf) {
+        let buf: Vec<u8> = fs::read(path).unwrap();
+        let res = parse(&buf);
+        assert!(res.len() > 0);
+        assert_ne!(res, buf);
+    }
 }
