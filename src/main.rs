@@ -53,6 +53,13 @@ fn main() {
     let mut carver = Carver::new(reader, json_writer, report_writer, None, None);
     carver.min_size = args.min_size;
     carver.fix_incomplete = args.fix_incomplete;
+    carver.report_all = args.report_all;
     carver.replace_newlines(args.replace_newlines);
-    carver.parse();
+    match carver.parse() {
+        Ok(_) => std::process::exit(0),
+        Err(e) => {
+            eprintln!("Encountered an error: {:?}", e);
+            std::process::exit(1)
+        }
+    }
 }

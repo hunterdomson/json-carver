@@ -116,6 +116,8 @@ use std::io::{BufRead, BufReader, BufWriter, Read, StderrLock, StdinLock, Stdout
 
 use memchr;
 
+mod errors;
+
 // Incrementally extend the internal buffer by this amount of bytes, whenever
 // a JSON string no longer fits in it.
 const BUF_EXTEND_SIZE: usize = 4 << 20; // 4MiB
@@ -235,8 +237,8 @@ impl Report {
                 status, self.start, self.end, self.partial_end
             )
             .as_ref(),
-        )
-        .unwrap();
+        )?;
+        Ok(())
     }
 }
 
@@ -650,6 +652,8 @@ impl<'a> Carver<'a> {
 
         for b in self.reader.mut_ref().bytes() {
             let b = b?;
+            // We're at least one indentation level deep when parsing strings,
+            // so we can safely unwrap().
             let last_ident = self.jt.last_ident().unwrap();
 
             if !in_string {
@@ -711,6 +715,8 @@ impl<'a> Carver<'a> {
 
         for b in self.reader.mut_ref().bytes() {
             let b = b?;
+            // We've processed at least two bytes in order to be here, so we
+            // can safely unwrap().
             let last_byte = self.jt.last_byte().unwrap();
 
             // Check for leading zeroes.
@@ -843,25 +849,26 @@ impl<'a> Carver<'a> {
         }
     }
 
-    fn _print_incomplete(&mut self) {
+    fn _print_incomplete(&mut self) -> Result<(), errors::Err> {
         let w = self.json_writer.mut_ref();
-        w.write_all(&self.jt.processed[..self.jt.partial_close_end + 1])
-            .unwrap();
+        w.write_all(&self.jt.processed[..self.jt.partial_close_end + 1])?;
         for i in (0..self.jt.cur_ident_level).rev() {
             let closing_ident = _closing_ident(self.jt.ident_levels[i]);
-            w.write_all(&[closing_ident]).unwrap();
+            w.write_all(&[closing_ident])?;
         }
-        w.write_all(&[CHAR_NEWLINE]).unwrap();
+        w.write_all(&[CHAR_NEWLINE])?;
+        Ok(())
     }
 
     /// Start carving a stream of data for JSON strings.
-    pub fn parse(&mut self) -> () {
+    pub fn parse(&mut self) -> Result<(), errors::Err> {
         let mut start = 0;
         let mut lastb: Option<u8> = None;
 
         loop {
             let (read, ch) = match lastb {
                 Some(CHAR_LEFT_CURLY_BRACKET) | Some(CHAR_LEFT_SQUARE_BRACKET) => {
+                    // we can safely unwrap() because we're in Some()
                     (0, lastb.unwrap())
                 }
                 _ => match self.scout() {
@@ -884,8 +891,8 @@ impl<'a> Carver<'a> {
                     let end = start + self.jt.cur - 1;
                     let w = self.json_writer.mut_ref();
                     if self.jt.cur >= self.min_size {
-                        w.write_all(&self.jt.processed[..self.jt.cur]).unwrap();
-                        w.write_all(&[CHAR_NEWLINE]).unwrap();
+                        w.write_all(&self.jt.processed[..self.jt.cur])?;
+                        w.write_all(&[CHAR_NEWLINE])?;
                     }
                     start = end + 1;
                     lastb = None;
@@ -900,9 +907,9 @@ impl<'a> Carver<'a> {
                             end: corrupted_end,
                             partial_end: partial_end,
                         };
-                        report.print(&mut self.report_writer);
+                        report.print(&mut self.report_writer)?;
                         if self.fix_incomplete {
-                            self._print_incomplete()
+                            self._print_incomplete()?
                         }
                     }
                     start = corrupted_end + 1;
@@ -918,9 +925,9 @@ impl<'a> Carver<'a> {
                             end: corrupted_end,
                             partial_end: partial_end,
                         };
-                        report.print(&mut self.report_writer);
+                        report.print(&mut self.report_writer)?;
                         if self.fix_incomplete {
-                            self._print_incomplete()
+                            self._print_incomplete()?
                         }
                     }
                     break;
@@ -932,6 +939,7 @@ impl<'a> Carver<'a> {
             };
             self.jt.quick_clean();
         }
+        Ok(())
     }
 }
 
@@ -974,7 +982,8 @@ mod tests {
         let buf_disp = String::from_utf8_lossy(buf);
         eprintln!("### Evaluating buffer: {buf_disp}");
         let mut carver = create_carver(buf);
-        carver.parse();
+        let res = carver.parse();
+        assert!(res.is_ok());
         let res_buf = get_buf(&carver.json_writer);
         let res_buf_disp = String::from_utf8_lossy(&res_buf);
         eprintln!("### Result is: {res_buf_disp}");
@@ -986,7 +995,8 @@ mod tests {
         eprintln!("### Evaluating buffer: {buf_disp}");
         let mut carver = create_carver(buf);
         carver.fix_incomplete = fix;
-        carver.parse();
+        let res = carver.parse();
+        assert!(res.is_ok());
         let json_buf = get_buf(&carver.json_writer);
         let report_buf = get_buf(&carver.report_writer);
         let json_buf_disp = String::from_utf8_lossy(&json_buf);

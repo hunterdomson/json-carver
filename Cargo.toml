@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.40", features = ["derive"] }
 memchr = "2.7.5"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 rstest = "0.25.0"
