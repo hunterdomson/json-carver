@@ -34,6 +34,10 @@ struct Args {
     /// structurally valid, version of them.
     #[arg(long, default_value_t = false)]
     fix_incomplete: bool,
+
+    /// Report every JSON string in the stream, not just corrupted ones.
+    #[arg(long, default_value_t = false)]
+    report_all: bool,
 }
 
 fn main() {

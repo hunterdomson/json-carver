@@ -433,6 +433,8 @@ pub struct Carver<'a> {
     pub min_size: usize,
     /// Whether to attempt to fix incomplete JSON strings.
     pub fix_incomplete: bool,
+    /// Whether to report every detected JSON, not just corrupted ones.
+    pub report_all: bool,
 }
 
 impl<'a> Carver<'a> {
@@ -452,6 +454,7 @@ impl<'a> Carver<'a> {
             report_writer: report_writer,
             min_size: DEFAULT_MIN_JSON_SIZE,
             fix_incomplete: false,
+            report_all: false,
         }
     }
 
@@ -893,6 +896,15 @@ impl<'a> Carver<'a> {
                     if self.jt.cur >= self.min_size {
                         w.write_all(&self.jt.processed[..self.jt.cur])?;
                         w.write_all(&[CHAR_NEWLINE])?;
+                        if self.report_all {
+                            let report = Report {
+                                status: Cause::Completed,
+                                start: start,
+                                end: end,
+                                partial_end: end,
+                            };
+                            report.print(&mut self.report_writer)?;
+                        }
                     }
                     start = end + 1;
                     lastb = None;
