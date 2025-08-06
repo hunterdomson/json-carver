@@ -2,6 +2,18 @@
 name = "json-carver"
 version = "0.1.0"
 edition = "2024"
+authors = ["Hunter Domson <hunterdomson@protonmail.com>"]
+license = "MIT OR Apache-2.0"
+description = """
+Digital forensics tool that reads (carves) JSON strings from a dump. Think of it
+as a more accurate and faster replacement for the strings(1) utility.
+"""
+homepage = "https://github.com/hunterdomson/json-carver"
+repository = "https://github.com/hunterdomson/json-carver"
+documentation = "https://docs.rs/json-carver"
+readme = "README.md"
+keywords = ["json", "digital-forensics"]
+categories = ["command-line-utilities", "text-processing"]
 
 [dependencies]
 clap = { version = "4.5.40", features = ["derive"] }
